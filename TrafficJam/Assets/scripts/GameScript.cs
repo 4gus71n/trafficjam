@@ -51,7 +51,8 @@ public class GameScript : MonoBehaviour {
 				if (neighboor == null)
 					throw new UnityException("neighboor cannot be null!.");
 				tile.SetMixColor(neighboor.color, (neighboor.column > tile.column));
-				for (int yIndex = tile.row - 1; yIndex < 1; yIndex--) {
+				for (int yIndex = tile.row - 1; yIndex >= 1; yIndex--) {
+					Debug.Log("color"+neighboor.color);
 					TileScript iterTile = GetTile(yIndex, tile.column);
 					iterTile.ChangeFullColor(neighboor.color);
 				}
@@ -62,6 +63,8 @@ public class GameScript : MonoBehaviour {
 	public TileScript GetTile(int row, int col) {
 		return tiles.Find (tile => tile.column == col && tile.row == row);
 	}
+
+	Vehicle oldSpawn;
 
 	void Update () {
 		if (limitCarry <= 0f) {
@@ -78,11 +81,13 @@ public class GameScript : MonoBehaviour {
 					vehicle = truck;
 				break;
 			} 
+			vehicle.nextToUs = oldSpawn;
 			vehicle.channel = LEFT_COLUMN;
 			vehicle.color = Random.Range(Vehicle.RED, Vehicle.GREEN+1);
 			Vehicle copyOfVehicle = Instantiate(vehicle, new Vector3(LEFT_ROW_AXIS, START_ROAD_Y_AXIS, 0f), Quaternion.identity) as Vehicle;
 			vehicleBag.Add (copyOfVehicle);
 			copyOfVehicle.paused = false;
+			oldSpawn = copyOfVehicle;
 			waitCarry = 0f;
 			limitCarry = 0f;
 		}

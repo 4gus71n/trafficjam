@@ -37,8 +37,10 @@ public class Vehicle : MonoBehaviour {
 	}
 
 	void OnCollisionEnter2D() {
-		m.RenderMap (transform.position, renderer.bounds.size.y);
-		ChangeToExploding ();
+		if (GetStatus () != EXPLODE) {
+			m.RenderMap (transform.position, renderer.bounds.size.y);
+			ChangeToExploding ();
+		}
 	}
 
 	void ChangeRed() {
@@ -98,31 +100,14 @@ public class Vehicle : MonoBehaviour {
 
 	}
 
+	public Vehicle nextToUs;
+
 	void UpdateIdle(float timeDelta) {
-		Vehicle min = null;
-		foreach (Vehicle another in m.vehicleBag.FindAll(vq => vq.gameObject.GetInstanceID() != gameObject.GetInstanceID() )) {
-			if (((MathUtils.YDistance(another.transform.position, transform.position) <= (GetWarningDistance())*2))) {
-				min = another;
-			}
+		if ((nextToUs != null) && ((transform.renderer.bounds.min.y - nextToUs.renderer.bounds.max.y) < GetWarningDistance())) {
+			warningVehicle = nextToUs;
+			ChangeToWarning();
 		}
-		if (min != null) {
-			if (min.GetStatus() == EXPLODE) {
-				Vector3 target = min.transform.position;
-				target.x += 2f; //The operation may change!!!!
-				target.y -= -2f;
-				transform.rotation = Quaternion.LookRotation (Vector3.forward,target - transform.position); // we get the angle has to be rotated
-				
-				transform.position = Vector3.MoveTowards (this.transform.position,
-				                                          target,
-				                                          timeDelta * speed);	
 
-
-				
-			} else {
-				warningVehicle = min;
-				ChangeToWarning();
-			}
-		}
 	}
 
 	void UpdateWarning(float timeDelta) {
@@ -169,11 +154,11 @@ public class Vehicle : MonoBehaviour {
 			break;
 		}
 
-		//Detect if theres any warning aroudn
+		Vector3 target = new Vector3 (this.transform.position.x,
+		                              this.transform.position.y + GameScript.END_ROAD_Y_AXIS,
+		                              this.transform.position.z);
 		transform.position = Vector3.MoveTowards (this.transform.position,
-			                     new Vector3 (this.transform.position.x,
-			            					  this.transform.position.y + GameScript.END_ROAD_Y_AXIS,
-			             					  this.transform.position.z),
-			Time.deltaTime * speed);	
+		                                          target,
+		                                          Time.deltaTime * speed);
 	}
 }
