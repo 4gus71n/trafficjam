@@ -4,21 +4,35 @@ using System.Collections.Generic;
 
 public class Vehicle : MonoBehaviour {
 
+	//Sounds
+	public AudioClip drift;
+	public AudioClip explotion;
+
+	//Directions of the current car
+	public const int FORWARD = 0;
+	public const int TURN_LEFT = 1;
+	public const int TURN_RIGHT = 2;
+
+	public const float EXPLODING_ERASE_TIME = 3f;
+
 	public GameScript m;
 
 	public Renderer blue, green, warning;
 
+	//Car type
 	public const int CAR_TYPE = 0;
 	public const int TRUCK_TYPE = 1;
 
-	public const int RED = 0;
-	public const int BLUE = 1;
-	public const int GREEN = 2;
+	//Colors
+	public const int RED = 2;
+	public const int BLUE = 3;
+	public const int GREEN = 4;
 
 	public float speed;
 	public int color;
 	public bool paused;
-	public int channel;
+	public int channel; //Column that is currently running in
+	public int direction;
 
 	Animator animator;
 
@@ -38,7 +52,9 @@ public class Vehicle : MonoBehaviour {
 
 	void OnCollisionEnter2D() {
 		if (GetStatus () != EXPLODE) {
-			m.RenderMap (transform.position, renderer.bounds.size.y);
+			Debug.Log ("OnCollisionEnter2D");
+			//m.road.RenderMap (transform.position, renderer.bounds.size.y);
+			warningVehicle.ChangeToExploding();
 			ChangeToExploding ();
 		}
 	}
@@ -69,12 +85,10 @@ public class Vehicle : MonoBehaviour {
 	public const int IDLE = 0;
 	public const int WARNING = 1;
 	public const int EXPLODE = 2;
+	public const int DIE = 3;
+	public const int AVOIDING = 4;
 
 	private Vehicle warningVehicle = null;
-
-	public float GetWarningDistance() {
-		return renderer.bounds.size.y;
-	}
 
 	public void ChangeToWarning() {
 		SetStatus (WARNING);
@@ -82,6 +96,8 @@ public class Vehicle : MonoBehaviour {
 	}
 
 	public void ChangeToExploding() {
+		Debug.Log ("ChangeToExploding");
+		audio.PlayOneShot (explotion);
 		SetStatus (EXPLODE);
 		warning.renderer.enabled = false;
 	}
@@ -100,25 +116,35 @@ public class Vehicle : MonoBehaviour {
 
 	}
 
-	public Vehicle nextToUs;
+	public float GetWarningDistance() {
+		return 1.5f;
+	}
 
 	void UpdateIdle(float timeDelta) {
-		if ((nextToUs != null) && ((transform.renderer.bounds.min.y - nextToUs.renderer.bounds.max.y) < GetWarningDistance())) {
-			warningVehicle = nextToUs;
-			ChangeToWarning();
+		foreach (Vehicle v in 
+		         m.vehicleBag.FindAll(vec => (vec.GetInstanceID() != GetInstanceID()) && (vec.channel == channel) )) {
+			if ((v != null) && 
+			    (Vector3.Distance(v.transform.position, transform.position)) < GetWarningDistance()) {
+				warningVehicle = v;
+				ChangeToWarning();
+			}
 		}
-
 	}
 
 	void UpdateWarning(float timeDelta) {
-		if ((MathUtils.YDistance(warningVehicle.transform.position, transform.position)) > GetWarningDistance() ) {
-			warningVehicle.ChangeToIdle();
+		if (warningVehicle == null) ChangeToIdle();
+		if (warningVehicle.GetStatus() == DIE) ChangeToIdle();
+		if (Vector3.Distance(warningVehicle.transform.position, transform.position) > GetWarningDistance() ) {
 			ChangeToIdle();
 		}
 	}
 
 	void UpdateExplode(float timeDelta) {
-		ChangeToExploding ();
+		SetStatus (EXPLODE);
+		explodeTime += timeDelta;
+		if (explodeTime >= EXPLODING_ERASE_TIME) {
+			SetStatus(DIE);
+		}
 	}
 
 	public int GetStatus() {
@@ -129,36 +155,75 @@ public class Vehicle : MonoBehaviour {
 		animator.SetInteger("status", status);
 	}
 
+	int newColumn = -4;
+	float explodeTime = 0f, newAxis = -1f; 
 	// Update is called once per frame
 	void Update () {
 		if (paused)
 			return;
 		//If to erase the vehicle when goes off from the screen
 		if (transform.position.y < GameScript.END_ROAD_Y_AXIS) {
-			m.vehicleBag.Remove(this);
-			Destroy(gameObject);
+			SetStatus(DIE);
 		}
+
+		Quaternion rotation = Quaternion.identity;
+		Vector3 waypoint = new Vector3 (this.transform.position.x,
+		                                this.transform.position.y + GameScript.END_ROAD_Y_AXIS,
+		                                this.transform.position.z);
 		switch (GetStatus()) {
 		case IDLE:
 			UpdateIdle(Time.deltaTime);
 			break;
 		case WARNING:
+			if (warningVehicle.GetStatus() == EXPLODE) {
+				//Avoid it
+				audio.PlayOneShot (drift);
+				SetStatus(AVOIDING);
+				if (warningVehicle.channel == GameScript.LEFT_COLUMN) {
+					newAxis = GameScript.CENTER_ROW_AXIS;
+					newColumn = GameScript.CENTER_COLUMN;
+				}
+				if (warningVehicle.channel == GameScript.CENTER_COLUMN) {
+					newAxis = GameScript.RIGHT_ROW_AXIS;
+					newColumn = GameScript.RIGHT_COLUMN;
+				}
+				if (warningVehicle.channel == GameScript.RIGHT_COLUMN) {
+					newAxis = GameScript.CENTER_ROW_AXIS;
+					newColumn = GameScript.CENTER_COLUMN;
+				}
+
+			}
 			UpdateWarning(Time.deltaTime);
+			break;
+		case AVOIDING:
+			waypoint = transform.position;
+			if ((waypoint.x == newAxis) && (waypoint.y == (waypoint.y - transform.renderer.bounds.size.y))) {
+				ChangeToIdle();
+			} else {
+				waypoint.x = newAxis;
+				channel = newColumn;
+				waypoint.y = waypoint.y - transform.renderer.bounds.size.y;
+				transform.Rotate(waypoint);
+			}
 			break;
 		case EXPLODE:
 			UpdateExplode(Time.deltaTime);
 			return;
 			break;
+		case DIE:
+			m.vehicleBag.Remove(this);
+			Destroy(gameObject);
+			return;
+		break;
 		default:
 			throw new UnityException("Unkown status in the Vehicle animator's.");
 			break;
 		}
 
-		Vector3 target = new Vector3 (this.transform.position.x,
-		                              this.transform.position.y + GameScript.END_ROAD_Y_AXIS,
-		                              this.transform.position.z);
-		transform.position = Vector3.MoveTowards (this.transform.position,
-		                                          target,
-		                                          Time.deltaTime * speed);
+		if ( (GetStatus () != EXPLODE) && (GetStatus () != DIE) ) {
+			transform.position = Vector3.MoveTowards (this.transform.position,
+			                                          waypoint,
+			                                          Time.deltaTime * (speed));
+		}
 	}
 }

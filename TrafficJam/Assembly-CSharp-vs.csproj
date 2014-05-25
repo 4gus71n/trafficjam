@@ -46,6 +46,8 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
+     <Compile Include="Assets\Deleteme.cs" />
+     <Compile Include="Assets\RoadMap.cs" />
      <Compile Include="Assets\TileScript.cs" />
      <Compile Include="Assets\scripts\GameScript.cs" />
      <Compile Include="Assets\scripts\Vehicle.cs" />
