@@ -50,12 +50,20 @@ public class Vehicle : MonoBehaviour {
 		green.enabled = true;
 	}
 
-	void OnCollisionEnter2D() {
-		if (GetStatus () != EXPLODE) {
-			Debug.Log ("OnCollisionEnter2D");
-			//m.road.RenderMap (transform.position, renderer.bounds.size.y);
-			warningVehicle.ChangeToExploding();
-			ChangeToExploding ();
+	void OnCollisionEnter2D(Collision2D coll) {
+		if (coll.gameObject.tag == "bullet_blue" && color == BLUE) {
+			SetStatus(DIE);
+		} else if (coll.gameObject.tag == "bullet_red" && color == RED) {
+			SetStatus(DIE);
+		} else if (coll.gameObject.tag == "bullet_green" && color == GREEN) {
+			SetStatus(DIE);
+		} else if (coll.gameObject.tag == "car" || coll.gameObject.tag == "car_slow") { 
+			if (GetStatus () != EXPLODE) {
+				Debug.Log ("OnCollisionEnter2D");
+				//m.road.RenderMap (transform.position, renderer.bounds.size.y);
+				warningVehicle.ChangeToExploding();
+				ChangeToExploding ();
+			}
 		}
 	}
 
