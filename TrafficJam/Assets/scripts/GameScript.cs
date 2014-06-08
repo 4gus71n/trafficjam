@@ -4,21 +4,49 @@ using System.Collections.Generic;
 
 public class GameScript : MonoBehaviour {
 
+	//Text
+	public GUIText lifesText;
+	public GUIText timeText;
+	public GUIText crashesText;
+	public GUIText gameoverText;
+
 	public RoadMap road; //Object to manage the map
 	public	List<Vehicle> vehicleBag; //Cats bag where al the cars are in
 	public Vehicle car, truck;//Prefabs
+
+	public int lifescount;
+	public int crashescount;
 
 	public const float LEFT_ROW_AXIS = -1.030326f;
 	public const float CENTER_ROW_AXIS = -0.09628651f;
 	public const float RIGHT_ROW_AXIS = 0.8860641f;
 
 	public const float START_ROAD_Y_AXIS = 2.864136f;
-	public const float END_ROAD_Y_AXIS = -2.595164f;
+	public const float END_ROAD_Y_AXIS = -4.595164f;
+
+	public void ReloadLifeText() {
+		string lifestring = "";
+		for (int i = 0; i < lifescount; i++) {
+			lifestring = lifestring + "X";
+		}
+		lifesText.text = lifestring;
+	}
+
+	public void ReloadCrashesText() {
+		string crashesstring = "";
+		for (int i = 0; i < crashescount; i++) {
+			crashesstring = crashesstring + "X";
+		}
+		crashesText.text = crashesstring;
+	}
 
 	void Start () {
 		if (car == null || truck == null) {
 			throw new UnityException("car or truck prefabs cannot be null!.");
 		}
+		ReloadLifeText ();
+		ReloadCrashesText ();
+
 		vehicleBag = new List<Vehicle> ();
 	}
 
@@ -33,7 +61,40 @@ public class GameScript : MonoBehaviour {
 		waitCarry2 = 0f, limitCarry2 = 0f,
 		waitCarry3 = 0f, limitCarry3 = 0f;
 
+	float timeCarry = 0, mscounter = 0, secondcounter = 0;
+
+	bool pause;
+
 	void Update () {
+		if (pause) return;
+
+		if (lifescount == 0) {
+			pause = true;
+			gameoverText.text = "LOSER!";
+		}
+
+		timeCarry = timeCarry + Time.deltaTime;
+		if (timeCarry > 0.6f) {
+			mscounter++;
+			timeCarry = 0;
+		}
+		if (mscounter >= 60) {
+			secondcounter++;
+			mscounter = 0;
+		}
+		string time = "";
+		if (secondcounter < 10) {
+			time = "0:" + secondcounter;
+		} else {
+			time = time + ":" + secondcounter;
+		}
+		if (mscounter < 10) {
+			time = "0:" + mscounter;
+		} else {
+			time = time + ":" + mscounter;
+		}
+		timeText.text = time;
+
 		//Column 1
 		if (limitCarry <= 0f) {
 			limitCarry = Random.Range(MIN_GAP_BETWEEN_VEHICLES, MAX_GAP_BETWEEN_VEHICLES);

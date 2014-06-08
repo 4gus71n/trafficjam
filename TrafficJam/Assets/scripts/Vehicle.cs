@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class Vehicle : MonoBehaviour {
 
+
+
 	//Sounds
 	public AudioClip drift;
 	public AudioClip explotion;
@@ -50,17 +52,31 @@ public class Vehicle : MonoBehaviour {
 		green.enabled = true;
 	}
 
+	void ShootedWithBullet(int col) {
+		if (col == color) {
+			SetStatus(DIE);
+		}
+	}
+
 	void OnCollisionEnter2D(Collision2D coll) {
-		if (coll.gameObject.tag == "bullet_blue" && color == BLUE) {
-			SetStatus(DIE);
-		} else if (coll.gameObject.tag == "bullet_red" && color == RED) {
-			SetStatus(DIE);
-		} else if (coll.gameObject.tag == "bullet_green" && color == GREEN) {
-			SetStatus(DIE);
-		} else if (coll.gameObject.tag == "car" || coll.gameObject.tag == "car_slow") { 
+		Debug.Log (coll.gameObject.tag);
+		if (coll.gameObject.tag == "blue") {
+			ShootedWithBullet(BLUE);
+		} else if (coll.gameObject.tag == "turret") {
+			m.crashescount++;
+			m.ReloadCrashesText();
+			ChangeToExploding ();
+			TurretScript t = coll.gameObject.GetComponent<TurretScript>();
+			m.crashescount--;
+			m.ReloadCrashesText();
+		} else if (coll.gameObject.tag == "red") {
+			ShootedWithBullet(RED);
+		} else if (coll.gameObject.tag == "green") {
+			ShootedWithBullet(GREEN);
+		} else if (coll.gameObject.tag == "car") { 
 			if (GetStatus () != EXPLODE) {
-				Debug.Log ("OnCollisionEnter2D");
-				//m.road.RenderMap (transform.position, renderer.bounds.size.y);
+				m.crashescount++;
+				m.ReloadCrashesText();
 				warningVehicle.ChangeToExploding();
 				ChangeToExploding ();
 			}
